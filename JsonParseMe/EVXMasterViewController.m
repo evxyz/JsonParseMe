@@ -9,9 +9,15 @@
 #import "EVXMasterViewController.h"
 
 #import "EVXDetailViewController.h"
+#import "Course.h"
 
 @interface EVXMasterViewController () {
+// a mutableArray already declared for us.
     NSMutableArray *_objects;
+    // two vars we will need
+
+    Course *currentCourse;
+    NSMutableString *currentValue;
 }
 @end
 
@@ -35,7 +41,17 @@
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     [NSURLConnection sendAsynchronousRequest:request queue:[[NSOperationQueue alloc]init] completionHandler:^(NSURLResponse *responce, NSData *data, NSError *error){
 
-        // Lets Parse
+        // [NSURLConnection sendAsynchronousRequest allows us to
+        // a block as a completionHandler: once the XML request has finished
+        // one of the things that will be passed to the block is NSData *data,
+        // which we can accept and intialize
+        NSXMLParser *xmlParser = [[NSXMLParser alloc]initWithData:data];
+        // delegate for parser declared
+        [xmlParser setDelegate:self];
+        // then we just call parse method
+        [xmlParser parse];
+        // before this will work;
+        // goto header and tell it we will be delegate
         
     }];
 }
@@ -44,6 +60,62 @@
 {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+#pragma mark - NSXMLParserDelegate Methods 
+-(void)parserDidStartDocument:(NSXMLParser *)parser{
+    // this gets called only at the beginning so put
+    // initialization stuff here
+    currentValue =[[NSMutableString alloc]init];
+    _objects = [[NSMutableArray alloc]init];
+
+}
+-(void)parser:(NSXMLParser *)parser
+didStartElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qName attributes:(NSDictionary *)attributeDict {
+    [currentValue setString:@""];
+// courses begins with an entry tag
+    if ([elementName isEqualToString:@"entry"]) {
+        currentCourse = [[Course alloc]init];
+    }
+}
+-(void)parser:(NSXMLParser *)parser foundCharacters:(NSString *)string{
+    [currentValue appendString:string];
+}
+-(void)parser:(NSXMLParser *)parser
+didEndElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qName {
+    if ([elementName isEqualToString:@"d:Title"]) {
+        [currentCourse setTitle:[currentValue stringByTrimmingCharactersInSet: [NSCharacterSetwhitespaceAndNewlineCharacterSet]]];
+    }
+    if ([elementName isEqualToString:@"d:Category"]) {
+        [currentCourse setTitle:[currentValue stringByTrimmingCharactersInSet: [NSCharacterSetwhitespaceAndNewlineCharacterSet]]];
+    }
+    if ([elementName isEqualToString:@"d:ShortDescription"]) {
+        [currentCourse setTitle:[currentValue stringByTrimmingCharactersInSet: [NSCharacterSetwhitespaceAndNewlineCharacterSet]]];
+    }
+    // finshed with parse add it to the array
+    if ([elementName isEqualToString:@"d:entry"]) {
+        [_objects addObject:currentCourse];
+    }
+
+}
+
+-(void)paserDidEndDocument:(NSXMLParser *)parser {
+    // using background threads in an asyc pattern
+    // allows mobile apps to stay responsive while gathering
+    // data
+    // return to main thread and Update tableView
+    // getting on a backgrounding thread is okay
+    // posting from a background thread is likely to throw an error
+    // return to the main thread before posting to
+    // UIKIT
+
+    [dispatch_async(dispatch_get_main_queue(), ^{
+        // refreshes table view
+        [[self tableView]reloadData];
+    });
+
+}
+-(void)parser:(NSXMLParser *)parser parseErrorOccurred:(NSError *)parseError {
+    NSLog(@"Error Code: %d",[parseError code]);
 }
 
 - (void)insertNewObject:(id)sender
@@ -72,8 +144,8 @@
 {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
 
-    NSDate *object = _objects[indexPath.row];
-    cell.textLabel.text = [object description];
+    Course *object = _objects[indexPath.row];
+    cell.textLabel.text = [object   title];
     return cell;
 }
 

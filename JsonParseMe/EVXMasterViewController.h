@@ -9,5 +9,6 @@
 #import <UIKit/UIKit.h>
 
 @interface EVXMasterViewController : UITableViewController
+<NSXMLParserDelegate>
 
 @end
